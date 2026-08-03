@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rotation Drill — Serve-Receive Trainer</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
@@ -39,7 +40,7 @@ main{max-width:880px;margin:0 auto;padding:22px 18px 0;}
 .lib-toggle{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-left:auto;}
 
 .layout{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
-.court-wrap{flex:0 0 340px;}
+.court-wrap{flex:1 1 300px;max-width:380px;margin:0 auto;}
 svg.court{width:100%;height:auto;background:var(--court);border-radius:6px;border:3px solid var(--court-line);}
 .zone-label{font-family:'JetBrains Mono',monospace;font-size:10px;fill:rgba(237,232,220,0.55);}
 .token{cursor:pointer;}
@@ -72,6 +73,27 @@ svg.court{width:100%;height:auto;background:var(--court);border-radius:6px;borde
 .score-banner{font-family:'JetBrains Mono',monospace;font-size:13.5px;text-align:center;margin-top:10px;color:var(--text-dim);}
 .score-banner b{color:var(--gold);}
 footer.note{max-width:880px;margin:24px auto 0;padding:0 18px;color:var(--text-dim);font-size:12px;line-height:1.6;}
+
+/* ---- Responsive adjustments ---- */
+@media (max-width: 700px){
+  .layout{justify-content:center;}
+  .side-panel{min-width:0;width:100%;}
+}
+@media (max-width: 480px){
+  header{padding:18px 16px 14px;}
+  h1{font-size:23px;}
+  .sub{font-size:12.5px;}
+  main{padding:16px 12px 0;}
+  .mode-btn{font-size:11.5px;padding:10px 4px;}
+  .controls{flex-direction:column;align-items:stretch;}
+  .formation-tabs{justify-content:center;}
+  .rot-stepper{justify-content:center;padding:6px 14px;}
+  .lib-toggle{margin-left:0;justify-content:center;}
+  .court-wrap{max-width:100%;}
+  .info-box{padding:14px 14px;}
+  .chip{padding:8px 11px;font-size:12px;}
+  .action-row{flex-direction:column;}
+}
 </style>
 </head>
 <body>
