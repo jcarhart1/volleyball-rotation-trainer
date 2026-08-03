@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rotation Drill — Serve-Receive Trainer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
+
+:root{
+  --bg:#12151b; --panel:#1a1f28; --panel-2:#212836; --line:#2c3444;
+  --court:#8a5a34; --court-line:#ede8dc; --gold:#e8b94a; --blue:#3e7cb1;
+  --red:#c1554a; --green:#4c9a6a; --purple:#9a6fc9; --text:#ede8dc; --text-dim:#9aa3b5;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Work Sans',sans-serif;padding-bottom:50px;}
+h1,.disp{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.03em;}
+.mono{font-family:'JetBrains Mono',monospace;}
+
+header{background:linear-gradient(180deg,#171c25,var(--bg));border-bottom:1px solid var(--line);padding:24px 20px 16px;}
+.eyebrow{color:var(--gold);font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.15em;}
+h1{margin:4px 0 0;font-size:28px;color:var(--court-line);}
+.sub{color:var(--text-dim);font-size:13.5px;margin-top:6px;max-width:600px;line-height:1.5;}
+
+main{max-width:880px;margin:0 auto;padding:22px 18px 0;}
+
+.mode-toggle{display:flex;gap:8px;margin-bottom:18px;}
+.mode-btn{flex:1;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text-dim);font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.03em;text-transform:uppercase;font-size:13px;cursor:pointer;}
+.mode-btn.active{background:var(--gold);color:var(--bg);border-color:var(--gold);}
+
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+.formation-tabs{display:flex;gap:6px;background:var(--panel);padding:5px;border-radius:8px;border:1px solid var(--line);}
+.f-tab{padding:8px 14px;border-radius:6px;border:none;background:transparent;color:var(--text-dim);font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;cursor:pointer;letter-spacing:.02em;}
+.f-tab.active{background:var(--net-blue,#3e7cb1);color:#fff;}
+
+.rot-stepper{display:flex;align-items:center;gap:10px;background:var(--panel);padding:6px 6px 6px 14px;border-radius:8px;border:1px solid var(--line);}
+.rot-stepper button{background:var(--panel-2);border:1px solid var(--line);color:var(--court-line);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px;}
+.rot-label{font-family:'JetBrains Mono',monospace;font-size:13px;min-width:90px;text-align:center;}
+
+.lib-toggle{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-left:auto;}
+
+.layout{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+.court-wrap{flex:0 0 340px;}
+svg.court{width:100%;height:auto;background:var(--court);border-radius:6px;border:3px solid var(--court-line);}
+.zone-label{font-family:'JetBrains Mono',monospace;font-size:10px;fill:rgba(237,232,220,0.55);}
+.token{cursor:pointer;}
+.token circle{stroke:rgba(0,0,0,0.35);stroke-width:2;}
+.token text{font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;fill:#12151b;text-anchor:middle;dominant-baseline:central;}
+.token.empty circle{fill:rgba(237,232,220,0.12);stroke:rgba(237,232,220,0.3);stroke-dasharray:4 3;}
+.token.empty text{fill:rgba(237,232,220,0.4);font-size:11px;}
+.token.correct circle{stroke:var(--green);stroke-width:4;}
+.token.wrong circle{stroke:var(--red);stroke-width:4;}
+.net-line{stroke:var(--court-line);stroke-width:4;}
+.attack-line{stroke:rgba(237,232,220,0.5);stroke-width:2;stroke-dasharray:6 4;}
+
+.side-panel{flex:1;min-width:260px;}
+.info-box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-bottom:14px;}
+.info-box .section-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;}
+.info-box p{margin:0 0 8px;font-size:13.5px;line-height:1.5;color:var(--text);}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;}
+.leg-dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+
+.tray{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.chip{padding:9px 13px;border-radius:7px;border:2px solid var(--line);background:var(--panel-2);color:var(--court-line);font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;cursor:pointer;}
+.chip.armed{border-color:var(--gold);background:rgba(232,185,74,0.15);}
+.chip.used{opacity:0.3;cursor:not-allowed;}
+
+.action-row{display:flex;gap:10px;margin-top:14px;}
+.btn{flex:1;padding:11px;border-radius:7px;border:none;font-family:'Oswald',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:13px;cursor:pointer;}
+.btn.primary{background:var(--gold);color:var(--bg);}
+.btn.ghost{background:var(--panel-2);color:var(--text-dim);border:1px solid var(--line);}
+.score-banner{font-family:'JetBrains Mono',monospace;font-size:13.5px;text-align:center;margin-top:10px;color:var(--text-dim);}
+.score-banner b{color:var(--gold);}
+footer.note{max-width:880px;margin:24px auto 0;padding:0 18px;color:var(--text-dim);font-size:12px;line-height:1.6;}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">// visual rotation trainer</div>
+  <h1>Rotation Drill</h1>
+  <p class="sub">Step through each serve-receive rotation for 5-1, 6-2, and 4-2 — or switch to Quiz mode and place every player yourself.</p>
+</header>
+
+<main>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btnLearn">Learn Mode</button>
+    <button class="mode-btn" id="btnStrategy">Strategy Mode</button>
+    <button class="mode-btn" id="btnQuiz">Quiz Mode</button>
+  </div>
+
+  <div class="controls">
+    <div class="formation-tabs" id="formationTabs"></div>
+    <div class="rot-stepper" id="rotStepper">
+      <button id="prevRot">‹</button>
+      <span class="rot-label mono" id="rotLabel">Rotation 1</span>
+      <button id="nextRot">›</button>
+    </div>
+    <label class="lib-toggle" id="libToggleWrap">
+      <input type="checkbox" id="libToggle"> Show libero swap
+    </label>
+    <div class="formation-tabs" id="passQualityWrap" style="display:none;">
+      <button class="f-tab" id="pqPerfect">Perfect pass</button>
+      <button class="f-tab" id="pqOk">OK pass</button>
+      <button class="f-tab" id="pqBroken">Broken pass</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="court-wrap">
+      <svg class="court" viewBox="0 0 300 420" id="courtSvg"></svg>
+    </div>
+    <div class="side-panel">
+      <div class="info-box" id="infoBox"></div>
+      <div class="info-box" id="quizBox" style="display:none;">
+        <div class="section-label">Place each player</div>
+        <p style="margin-bottom:10px;">Tap a role below, then tap the zone on the court where it belongs.</p>
+        <div class="tray" id="tray"></div>
+        <div class="action-row">
+          <button class="btn ghost" id="clearBtn">Clear</button>
+          <button class="btn primary" id="checkBtn">Check Answers</button>
+        </div>
+        <div class="score-banner" id="scoreBanner"></div>
+        <div class="action-row">
+          <button class="btn ghost" id="newRoundBtn" style="display:none;">New Round →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="note">Zones 2–3–4 (top row, nearest the net) are front row; zones 1–6–5 (bottom row) are back row. Rotation numbers refer to where a formation's primary setter is standing.</footer>
+
+<script>
+const ROLE_COLORS = { S:'#e8b94a', S1:'#e8b94a', S2:'#c9a34a', OH1:'#3e7cb1', OH2:'#5a9ac9', MB1:'#c1554a', MB2:'#d97a6a', OPP:'#4c9a6a', L:'#9a6fc9' };
+const ROLE_FULL = { S:'Setter', S1:'Setter 1', S2:'Setter 2', OH1:'Outside 1', OH2:'Outside 2', MB1:'Middle 1', MB2:'Middle 2', OPP:'Opposite', L:'Libero' };
+
+const FORMATIONS = {
+  '5-1': {
+    label:'5-1',
+    cycle:['S','OH1','MB1','OPP','OH2','MB2'],
+    note:'One setter runs every rotation. Whenever the setter is in the back row, the front row has three real attackers (both outsides + the opposite).'
+  },
+  '6-2': {
+    label:'6-2',
+    cycle:['S1','OH1','MB1','S2','OH2','MB2'],
+    setterSetsFrom:'back',
+    note:'Two setters alternate. Whichever setter is in the BACK row runs the offense — the front-row setter plays like a third hitter, so there are always 3 front-row attackers.'
+  },
+  '4-2': {
+    label:'4-2',
+    cycle:['S1','OH1','MB1','S2','OH2','MB2'],
+    setterSetsFrom:'front',
+    note:'Two setters alternate. Whichever setter is in the FRONT row sets — simplest system to teach, but only 2 real attackers up front since the setter does not hit.'
+  }
+};
+
+// Zone layout: front row (near net) = zones 4,3,2 left-to-right; back row = zones 5,6,1 left-to-right
+const ZONE_POS = {
+  4:{x:70,y:110}, 3:{x:150,y:110}, 2:{x:230,y:110},
+  5:{x:70,y:300}, 6:{x:150,y:300}, 1:{x:230,y:300}
+};
+const FRONT_ZONES = [4,3,2];
+const BACK_ZONES = [5,6,1];
+
+let state = {
+  mode:'learn',
+  formation:'5-1',
+  rotation:1,
+  showLibero:false,
+  passQuality:'perfect',
+  quiz:{ placements:{}, armedChip:null, checked:false, correctCount:0, tray:[] }
+};
+
+function computeSettingRole(f, zones){
+  if(state.formation==='5-1') return 'S';
+  if(f.setterSetsFrom==='back') return BACK_ZONES.map(z=>zones[z]).find(r=>r==='S1'||r==='S2');
+  return FRONT_ZONES.map(z=>zones[z]).find(r=>r==='S1'||r==='S2');
+}
+
+function getZonesForRotation(cycle, rotationNumber){
+  let arr = cycle.slice();
+  for(let i=0;i<rotationNumber-1;i++){ arr.push(arr.shift()); }
+  let zones={};
+  for(let z=1; z<=6; z++) zones[z]=arr[z-1];
+  return zones;
+}
+
+function applyLibero(zones){
+  const out = Object.assign({}, zones);
+  BACK_ZONES.forEach(z=>{
+    if(out[z] && out[z].startsWith('MB')) out[z] = 'L';
+  });
+  return out;
+}
+
+function buildFormationTabs(){
+  const wrap = document.getElementById('formationTabs');
+  wrap.innerHTML='';
+  Object.keys(FORMATIONS).forEach(key=>{
+    const b = document.createElement('button');
+    b.className = 'f-tab' + (state.formation===key ? ' active':'');
+    b.textContent = FORMATIONS[key].label;
+    b.onclick = ()=>{ state.formation=key; state.rotation=1; if(state.mode==='quiz') resetQuiz(); render(); };
+    wrap.appendChild(b);
+  });
+}
+
+function drawCourt(zones, opts){
+  opts = opts || {};
+  const svg = document.getElementById('courtSvg');
+  let inner = `
+    <rect x="10" y="20" width="280" height="380" fill="none" stroke="var(--court-line)" stroke-width="2" opacity="0.5"/>
+    <line x1="10" y1="20" x2="290" y2="20" class="net-line"/>
+    <text x="150" y="12" text-anchor="middle" class="zone-label" fill="#ede8dc" font-size="11">NET</text>
+    <line x1="10" y1="200" x2="290" y2="200" class="attack-line"/>
+  `;
+  [4,3,2,5,6,1].forEach(z=>{
+    const p = ZONE_POS[z];
+    inner += `<text x="${p.x}" y="${p.y-38}" text-anchor="middle" class="zone-label">ZONE ${z}</text>`;
+  });
+
+  if(opts.quiz){
+    [4,3,2,5,6,1].forEach(z=>{
+      const p = ZONE_POS[z];
+      const role = state.quiz.placements[z];
+      const checked = state.quiz.checked;
+      let cls = 'token';
+      if(!role) cls += ' empty';
+      if(checked && role){
+        const correct = state.quiz.correctZones[z] === role;
+        cls += correct ? ' correct' : ' wrong';
+      }
+      const fill = role ? ROLE_COLORS[role] : 'transparent';
+      inner += `<g class="${cls}" data-zone="${z}" onclick="onZoneClick(${z})">
+        <circle cx="${p.x}" cy="${p.y}" r="26" fill="${fill}"/>
+        <text x="${p.x}" y="${p.y}">${role || '?'}</text>
+      </g>`;
+    });
+  } else {
+    [4,3,2,5,6,1].forEach(z=>{
+      const p = ZONE_POS[z];
+      const role = zones[z];
+      const dim = opts.dimZones && opts.dimZones.includes(z);
+      const op = dim ? 0.28 : 1;
+      inner += `<g class="token" style="opacity:${op}">
+        <circle cx="${p.x}" cy="${p.y}" r="26" fill="${ROLE_COLORS[role] || '#666'}"/>
+        <text x="${p.x}" y="${p.y}">${role}</text>
+      </g>`;
+      if(opts.callLabels && opts.callLabels[z]){
+        inner += `<text x="${p.x}" y="${p.y+42}" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" font-weight="700" fill="#e8b94a" opacity="${op}">${opts.callLabels[z]}</text>`;
+      }
+    });
+  }
+  svg.innerHTML = inner;
+}
+
+function renderLearn(){
+  document.getElementById('rotStepper').style.display='flex';
+  document.getElementById('libToggleWrap').style.display='flex';
+  document.getElementById('quizBox').style.display='none';
+  document.getElementById('infoBox').style.display='block';
+
+  const f = FORMATIONS[state.formation];
+  let zones = getZonesForRotation(f.cycle, state.rotation);
+  if(state.showLibero) zones = applyLibero(zones);
+  drawCourt(zones, {quiz:false});
+
+  document.getElementById('rotLabel').textContent = 'Rotation ' + state.rotation;
+
+  const frontRoles = FRONT_ZONES.map(z=>zones[z]);
+  const settingRole = computeSettingRole(f, zones);
+  const realAttackers = frontRoles.filter(r => r !== settingRole).length;
+
+  document.getElementById('infoBox').innerHTML = `
+    <div class="section-label">${f.label} — Rotation ${state.rotation}</div>
+    <p>${f.note}</p>
+    <p class="mono" style="color:var(--court-line);">Setting this rotation: <b style="color:var(--gold)">${ROLE_FULL[settingRole] || settingRole}</b> · Front-row attackers: <b style="color:var(--gold)">${realAttackers}</b></p>
+    <div class="legend" id="legend"></div>
+  `;
+  const legend = document.getElementById('legend');
+  const rolesUsed = [...new Set(Object.values(zones))];
+  legend.innerHTML = rolesUsed.map(r=>`<span class="leg-item"><span class="leg-dot" style="background:${ROLE_COLORS[r]}"></span>${ROLE_FULL[r]||r}</span>`).join('');
+}
+
+const PASS_LABELS = { perfect:'Perfect pass', ok:'OK pass', broken:'Broken pass' };
+
+function renderStrategy(){
+  document.getElementById('rotStepper').style.display='flex';
+  document.getElementById('libToggleWrap').style.display='none';
+  document.getElementById('quizBox').style.display='none';
+  document.getElementById('passQualityWrap').style.display='flex';
+  document.getElementById('infoBox').style.display='block';
+  ['pqPerfect','pqOk','pqBroken'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('pq'+state.passQuality[0].toUpperCase()+state.passQuality.slice(1)).classList.add('active');
+
+  const f = FORMATIONS[state.formation];
+  const zones = getZonesForRotation(f.cycle, state.rotation);
+  document.getElementById('rotLabel').textContent = 'Rotation ' + state.rotation;
+
+  const settingRole = computeSettingRole(f, zones);
+  const settingZone = FRONT_ZONES.concat(BACK_ZONES).find(z=>zones[z]===settingRole);
+
+  let options = [];
+  FRONT_ZONES.forEach(z=>{
+    const role = zones[z];
+    if(role === settingRole) return;
+    if(role.startsWith('MB')) options.push({zone:z, role, code:'1', label:'Quick middle'});
+    else if(role.startsWith('OH')) options.push({zone:z, role, code:'4', label:'High ball outside'});
+    else options.push({zone:z, role, code:'2', label:'Backside'});
+  });
+  const z6role = zones[6];
+  let pipeOption = null;
+  if(z6role && !z6role.startsWith('MB') && z6role !== settingRole){
+    pipeOption = {zone:6, role:z6role, code:'6', label:'Pipe (back-row)'};
+  }
+
+  let available;
+  if(state.passQuality==='perfect'){
+    available = options.concat(pipeOption ? [pipeOption] : []);
+  } else if(state.passQuality==='ok'){
+    available = options.slice();
+  } else {
+    const safe = options.find(o=>o.role.startsWith('OH')) || options[0];
+    available = safe ? [safe] : [];
+  }
+  const availableZones = available.map(o=>o.zone);
+
+  const callLabels = {};
+  callLabels[settingZone] = 'SET';
+  options.forEach(o=> callLabels[o.zone] = o.code+' · '+o.label.split(' ')[0]);
+  if(pipeOption) callLabels[6] = pipeOption.code+' · pipe';
+
+  const relevantZones = FRONT_ZONES.concat(pipeOption ? [6] : []);
+  const dimZones = relevantZones.filter(z => z!==settingZone && !availableZones.includes(z));
+
+  drawCourt(zones, {quiz:false, callLabels, dimZones});
+
+  const menuRows = options.concat(pipeOption?[pipeOption]:[]).map(o=>{
+    const live = availableZones.includes(o.zone);
+    return `<p style="opacity:${live?1:0.4};${live?'':'text-decoration:line-through;'}">
+      <b style="color:var(--gold)">${o.code}</b> — ${o.label} <span class="mono" style="color:var(--text-dim)">(${ROLE_FULL[o.role]}, zone ${o.zone})</span>
+    </p>`;
+  }).join('');
+
+  document.getElementById('infoBox').innerHTML = `
+    <div class="section-label">${f.label} — Rotation ${state.rotation} · Attack menu</div>
+    ${menuRows}
+    <p class="mono" style="color:var(--court-line); margin-top:10px;">${PASS_LABELS[state.passQuality]}: <b style="color:var(--gold)">${available.length}</b> live option${available.length===1?'':'s'}</p>
+    <div class="section-label" style="margin-top:14px;">Why this matters</div>
+    <p>Even well-passed teams run their full attack menu less often than you'd think — a shanked or tight pass takes options off the table before the setter ever touches it. The Pass Quality buttons are a simplified version of that same setter decision: what's actually available <i>right now</i>, not just what's drawn on the whiteboard.</p>
+    <p>Overload vs. isolate: a quick middle set that pulls the opposing middle blocker can leave a pin hitter one-on-one with a single blocker (isolate). Running two attackers through the same third of the net at once — a slide behind a quick, for example — is how teams overload a block instead. Neither is modeled geometrically here, but it's the read a setter is making once the ball is in the air.</p>
+  `;
+}
+
+function resetQuiz(){
+  const f = FORMATIONS[state.formation];
+  const randRot = 1 + Math.floor(Math.random()*6);
+  state.rotation = randRot;
+  const zones = getZonesForRotation(f.cycle, randRot);
+  state.quiz.correctZones = zones;
+  state.quiz.placements = {};
+  state.quiz.armedChip = null;
+  state.quiz.checked = false;
+  state.quiz.correctCount = 0;
+  state.quiz.tray = shuffle(f.cycle.slice());
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function renderQuiz(){
+  document.getElementById('rotStepper').style.display='none';
+  document.getElementById('libToggleWrap').style.display='none';
+  document.getElementById('quizBox').style.display='block';
+
+  document.getElementById('infoBox').innerHTML = `
+    <div class="section-label">${FORMATIONS[state.formation].label} — Rotation ${state.rotation}</div>
+    <p>Zones are blank, but you know the formation and rotation number. Tap a role chip, then tap the court zone it belongs in.</p>
+  `;
+
+  drawCourt(null, {quiz:true});
+
+  const tray = document.getElementById('tray');
+  tray.innerHTML='';
+  const usedRoles = Object.values(state.quiz.placements);
+  state.quiz.tray.forEach(role=>{
+    const used = usedRoles.includes(role);
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (used ? ' used' : '') + (state.quiz.armedChip===role ? ' armed' : '');
+    chip.textContent = role;
+    chip.disabled = used || state.quiz.checked;
+    chip.onclick = ()=>{ state.quiz.armedChip = (state.quiz.armedChip===role ? null : role); renderQuiz(); };
+    tray.appendChild(chip);
+  });
+
+  const scoreBanner = document.getElementById('scoreBanner');
+  const newRoundBtn = document.getElementById('newRoundBtn');
+  if(state.quiz.checked){
+    scoreBanner.innerHTML = `Score: <b>${state.quiz.correctCount} / 6</b> correct`;
+    newRoundBtn.style.display='block';
+  } else {
+    const placedCount = Object.keys(state.quiz.placements).length;
+    scoreBanner.textContent = `${placedCount} / 6 placed`;
+    newRoundBtn.style.display='none';
+  }
+}
+
+function onZoneClick(zone){
+  if(state.mode!=='quiz' || state.quiz.checked) return;
+  if(state.quiz.armedChip){
+    // remove chip from any other zone first
+    Object.keys(state.quiz.placements).forEach(z=>{
+      if(state.quiz.placements[z]===state.quiz.armedChip) delete state.quiz.placements[z];
+    });
+    state.quiz.placements[zone] = state.quiz.armedChip;
+    state.quiz.armedChip = null;
+  } else if(state.quiz.placements[zone]){
+    delete state.quiz.placements[zone];
+  }
+  renderQuiz();
+}
+
+function render(){
+  buildFormationTabs();
+  document.getElementById('btnLearn').classList.toggle('active', state.mode==='learn');
+  document.getElementById('btnStrategy').classList.toggle('active', state.mode==='strategy');
+  document.getElementById('btnQuiz').classList.toggle('active', state.mode==='quiz');
+  if(state.mode==='learn') renderLearn();
+  else if(state.mode==='strategy') renderStrategy();
+  else renderQuiz();
+}
+
+document.getElementById('btnLearn').onclick = ()=>{ state.mode='learn'; state.rotation=1; render(); };
+document.getElementById('btnStrategy').onclick = ()=>{ state.mode='strategy'; state.rotation=1; render(); };
+document.getElementById('btnQuiz').onclick = ()=>{ state.mode='quiz'; resetQuiz(); render(); };
+document.getElementById('pqPerfect').onclick = ()=>{ state.passQuality='perfect'; render(); };
+document.getElementById('pqOk').onclick = ()=>{ state.passQuality='ok'; render(); };
+document.getElementById('pqBroken').onclick = ()=>{ state.passQuality='broken'; render(); };
+document.getElementById('prevRot').onclick = ()=>{ state.rotation = state.rotation===1?6:state.rotation-1; render(); };
+document.getElementById('nextRot').onclick = ()=>{ state.rotation = state.rotation===6?1:state.rotation+1; render(); };
+document.getElementById('libToggle').onchange = (e)=>{ state.showLibero = e.target.checked; render(); };
+document.getElementById('clearBtn').onclick = ()=>{ state.quiz.placements={}; state.quiz.armedChip=null; renderQuiz(); };
+document.getElementById('checkBtn').onclick = ()=>{
+  let correct=0;
+  Object.keys(state.quiz.correctZones).forEach(z=>{
+    if(state.quiz.placements[z] === state.quiz.correctZones[z]) correct++;
+  });
+  state.quiz.correctCount = correct;
+  state.quiz.checked = true;
+  renderQuiz();
+};
+document.getElementById('newRoundBtn').onclick = ()=>{ resetQuiz(); renderQuiz(); };
+
+render();
+</script>
+</body>
+</html>
