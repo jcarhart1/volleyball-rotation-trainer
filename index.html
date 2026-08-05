@@ -67,6 +67,13 @@ svg.court{width:100%;height:auto;background:var(--court);border-radius:6px;borde
 .chip.armed{border-color:var(--gold);background:rgba(232,185,74,0.15);}
 .chip.used{opacity:0.3;cursor:not-allowed;}
 
+.lineup-btn{width:100%;padding:10px;margin-bottom:14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--gold);font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.03em;text-transform:uppercase;font-size:13px;cursor:pointer;}
+.lineup-panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px;}
+.lineup-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.lineup-row .role-tag{width:52px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold);}
+.lineup-row input{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'Work Sans',sans-serif;font-size:13px;}
+.lineup-row input:focus{outline:none;border-color:var(--net-blue,#3e7cb1);}
+
 .action-row{display:flex;gap:10px;margin-top:14px;}
 .btn{flex:1;padding:11px;border-radius:7px;border:none;font-family:'Oswald',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:13px;cursor:pointer;}
 .btn.primary{background:var(--gold);color:var(--bg);}
@@ -112,6 +119,12 @@ footer.note{max-width:880px;margin:24px auto 0;padding:0 18px;color:var(--text-d
     <button class="mode-btn" id="btnQuiz">Quiz Mode</button>
   </div>
 
+  <button class="lineup-btn" id="lineupToggleBtn">✎ My Lineup — use your players' names</button>
+  <div class="lineup-panel" id="lineupPanel" style="display:none;">
+    <div class="section-label">Type each player's name (optional — leave blank to keep role codes)</div>
+    <div id="lineupFields"></div>
+  </div>
+
   <div class="controls">
     <div class="formation-tabs" id="formationTabs"></div>
     <div class="rot-stepper" id="rotStepper">
@@ -155,8 +168,8 @@ footer.note{max-width:880px;margin:24px auto 0;padding:0 18px;color:var(--text-d
 <footer class="note">Zones 2–3–4 (top row, nearest the net) are front row; zones 1–6–5 (bottom row) are back row. Rotation numbers refer to where a formation's primary setter is standing.</footer>
 
 <script>
-const ROLE_COLORS = { S:'#e8b94a', S1:'#e8b94a', S2:'#c9a34a', OH1:'#3e7cb1', OH2:'#5a9ac9', MB1:'#c1554a', MB2:'#d97a6a', OPP:'#4c9a6a', L:'#9a6fc9' };
-const ROLE_FULL = { S:'Setter', S1:'Setter 1', S2:'Setter 2', OH1:'Outside 1', OH2:'Outside 2', MB1:'Middle 1', MB2:'Middle 2', OPP:'Opposite', L:'Libero' };
+const ROLE_COLORS = { S:'#e8b94a', S1:'#e8b94a', S2:'#c9a34a', S3:'#d9a83e', OH1:'#3e7cb1', OH2:'#5a9ac9', MB1:'#c1554a', MB2:'#d97a6a', OPP:'#4c9a6a', L:'#9a6fc9', H1:'#3e7cb1', H2:'#5a9ac9', H3:'#7ab0d9' };
+const ROLE_FULL = { S:'Setter', S1:'Setter 1', S2:'Setter 2', S3:'Setter 3', OH1:'Outside 1', OH2:'Outside 2', MB1:'Middle 1', MB2:'Middle 2', OPP:'Opposite', L:'Libero', H1:'Hitter 1', H2:'Hitter 2', H3:'Hitter 3' };
 
 const FORMATIONS = {
   '5-1': {
@@ -175,6 +188,12 @@ const FORMATIONS = {
     cycle:['S1','OH1','MB1','S2','OH2','MB2'],
     setterSetsFrom:'front',
     note:'Two setters alternate. Whichever setter is in the FRONT row sets — simplest system to teach, but only 2 real attackers up front since the setter does not hit.'
+  },
+  '6-3': {
+    label:'6-3',
+    cycle:['S3','H3','S1','H1','S2','H2'],
+    sixThree:true,
+    note:'Three setters and three hitters share every rotation — common for younger or beginner teams. Because setters and hitters alternate seats, the front row always has 1 or 2 setters up at once. When two are up, this tool has the one nearest zone 2/3 run the offense while the other blocks/hits like a regular attacker — real teams can assign that either way.'
   }
 };
 
@@ -192,11 +211,47 @@ let state = {
   rotation:1,
   showLibero:false,
   passQuality:'perfect',
+  names:{},
+  lineupOpen:false,
   quiz:{ placements:{}, armedChip:null, checked:false, correctCount:0, tray:[] }
 };
 
+function getName(role){
+  const nm = (state.names[role]||'').trim();
+  return nm || null;
+}
+
+function getLineupRoles(){
+  return FORMATIONS[state.formation].cycle.concat(['L']);
+}
+
+function renderLineupPanel(){
+  const wrap = document.getElementById('lineupFields');
+  wrap.innerHTML = '';
+  getLineupRoles().forEach(role=>{
+    const row = document.createElement('div');
+    row.className = 'lineup-row';
+    const tag = document.createElement('span');
+    tag.className = 'role-tag';
+    tag.textContent = role;
+    row.appendChild(tag);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = ROLE_FULL[role] || role;
+    input.value = state.names[role] || '';
+    input.oninput = (e)=>{ state.names[role] = e.target.value; refreshCourtOnly(); };
+    row.appendChild(input);
+    wrap.appendChild(row);
+  });
+}
+
 function computeSettingRole(f, zones){
   if(state.formation==='5-1') return 'S';
+  if(state.formation==='6-3'){
+    const priority = [3,2,4];
+    for(const z of priority){ if(zones[z] && zones[z].startsWith('S')) return zones[z]; }
+    return null;
+  }
   if(f.setterSetsFrom==='back') return BACK_ZONES.map(z=>zones[z]).find(r=>r==='S1'||r==='S2');
   return FRONT_ZONES.map(z=>zones[z]).find(r=>r==='S1'||r==='S2');
 }
@@ -224,7 +279,7 @@ function buildFormationTabs(){
     const b = document.createElement('button');
     b.className = 'f-tab' + (state.formation===key ? ' active':'');
     b.textContent = FORMATIONS[key].label;
-    b.onclick = ()=>{ state.formation=key; state.rotation=1; if(state.mode==='quiz') resetQuiz(); render(); };
+    b.onclick = ()=>{ state.formation=key; state.rotation=1; if(state.mode==='quiz') resetQuiz(); renderLineupPanel(); render(); };
     wrap.appendChild(b);
   });
 }
@@ -255,10 +310,14 @@ function drawCourt(zones, opts){
         cls += correct ? ' correct' : ' wrong';
       }
       const fill = role ? ROLE_COLORS[role] : 'transparent';
+      const nm = role ? getName(role) : null;
       inner += `<g class="${cls}" data-zone="${z}" onclick="onZoneClick(${z})">
         <circle cx="${p.x}" cy="${p.y}" r="26" fill="${fill}"/>
         <text x="${p.x}" y="${p.y}">${role || '?'}</text>
       </g>`;
+      if(nm){
+        inner += `<text x="${p.x}" y="${p.y+42}" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" font-weight="700" fill="#e8b94a">${nm}</text>`;
+      }
     });
   } else {
     [4,3,2,5,6,1].forEach(z=>{
@@ -280,14 +339,16 @@ function drawCourt(zones, opts){
 
 function renderLearn(){
   document.getElementById('rotStepper').style.display='flex';
-  document.getElementById('libToggleWrap').style.display='flex';
+  document.getElementById('libToggleWrap').style.display = state.formation==='6-3' ? 'none' : 'flex';
   document.getElementById('quizBox').style.display='none';
   document.getElementById('infoBox').style.display='block';
 
   const f = FORMATIONS[state.formation];
   let zones = getZonesForRotation(f.cycle, state.rotation);
   if(state.showLibero) zones = applyLibero(zones);
-  drawCourt(zones, {quiz:false});
+  const nameLabels = {};
+  [4,3,2,5,6,1].forEach(z=>{ const nm = getName(zones[z]); if(nm) nameLabels[z] = nm; });
+  drawCourt(zones, {quiz:false, callLabels:nameLabels});
 
   document.getElementById('rotLabel').textContent = 'Rotation ' + state.rotation;
 
@@ -298,12 +359,12 @@ function renderLearn(){
   document.getElementById('infoBox').innerHTML = `
     <div class="section-label">${f.label} — Rotation ${state.rotation}</div>
     <p>${f.note}</p>
-    <p class="mono" style="color:var(--court-line);">Setting this rotation: <b style="color:var(--gold)">${ROLE_FULL[settingRole] || settingRole}</b> · Front-row attackers: <b style="color:var(--gold)">${realAttackers}</b></p>
+    <p class="mono" style="color:var(--court-line);">Setting this rotation: <b style="color:var(--gold)">${ROLE_FULL[settingRole] || settingRole}${getName(settingRole)?' — '+getName(settingRole):''}</b> · Front-row attackers: <b style="color:var(--gold)">${realAttackers}</b></p>
     <div class="legend" id="legend"></div>
   `;
   const legend = document.getElementById('legend');
   const rolesUsed = [...new Set(Object.values(zones))];
-  legend.innerHTML = rolesUsed.map(r=>`<span class="leg-item"><span class="leg-dot" style="background:${ROLE_COLORS[r]}"></span>${ROLE_FULL[r]||r}</span>`).join('');
+  legend.innerHTML = rolesUsed.map(r=>`<span class="leg-item"><span class="leg-dot" style="background:${ROLE_COLORS[r]}"></span>${ROLE_FULL[r]||r}${getName(r)?' — '+getName(r):''}</span>`).join('');
 }
 
 const PASS_LABELS = { perfect:'Perfect pass', ok:'OK pass', broken:'Broken pass' };
@@ -324,18 +385,29 @@ function renderStrategy(){
   const settingRole = computeSettingRole(f, zones);
   const settingZone = FRONT_ZONES.concat(BACK_ZONES).find(z=>zones[z]===settingRole);
 
-  let options = [];
+  const MIDDLE_OPTIONS = {
+  '5-1': {1:['Gap','Quick'], 2:['Quick','Back-Quick'], 3:['Gap','Quick'], 4:['Gap','Quick'], 5:['Quick','Back-Quick'], 6:['Gap','Quick']},
+  '6-2': {1:['Gap','Quick'], 2:['Quick','Back-Quick'], 3:['Gap','Quick'], 4:['Gap','Quick'], 5:['Quick','Back-Quick'], 6:['Gap','Quick']}
+};
+
+let options = [];
   FRONT_ZONES.forEach(z=>{
     const role = zones[z];
     if(role === settingRole) return;
-    if(role.startsWith('MB')) options.push({zone:z, role, code:'1', label:'Quick middle'});
-    else if(role.startsWith('OH')) options.push({zone:z, role, code:'4', label:'High ball outside'});
-    else options.push({zone:z, role, code:'2', label:'Backside'});
+    if(z === 3){
+      const mOpts = (MIDDLE_OPTIONS[state.formation] && MIDDLE_OPTIONS[state.formation][state.rotation]) || ['Quick'];
+      options.push({zone:z, role, code:mOpts[0], label:mOpts.join(' or ')+' (middle)'});
+    } else if(z === 2){
+      if(role.startsWith('MB')) options.push({zone:z, role, code:'Slide', label:'Slide — middle attacking the right pin'});
+      else options.push({zone:z, role, code:'Red', label:'Red (standard right-side)'});
+    } else {
+      options.push({zone:z, role, code:'Go', label:'Go (standard left-side)'});
+    }
   });
   const z6role = zones[6];
   let pipeOption = null;
   if(z6role && !z6role.startsWith('MB') && z6role !== settingRole){
-    pipeOption = {zone:6, role:z6role, code:'6', label:'Pipe (back-row)'};
+    pipeOption = {zone:6, role:z6role, code:'Pipe', label:'Pipe — back-row attack through zone 6'};
   }
 
   let available;
@@ -350,9 +422,9 @@ function renderStrategy(){
   const availableZones = available.map(o=>o.zone);
 
   const callLabels = {};
-  callLabels[settingZone] = 'SET';
-  options.forEach(o=> callLabels[o.zone] = o.code+' · '+o.label.split(' ')[0]);
-  if(pipeOption) callLabels[6] = pipeOption.code+' · pipe';
+  callLabels[settingZone] = 'SET' + (getName(settingRole) ? ' · '+getName(settingRole) : '');
+  options.forEach(o=> callLabels[o.zone] = o.code + (getName(o.role) ? ' · '+getName(o.role) : ''));
+  if(pipeOption) callLabels[6] = pipeOption.code + (getName(pipeOption.role) ? ' · '+getName(pipeOption.role) : '');
 
   const relevantZones = FRONT_ZONES.concat(pipeOption ? [6] : []);
   const dimZones = relevantZones.filter(z => z!==settingZone && !availableZones.includes(z));
@@ -361,8 +433,9 @@ function renderStrategy(){
 
   const menuRows = options.concat(pipeOption?[pipeOption]:[]).map(o=>{
     const live = availableZones.includes(o.zone);
+    const nm = getName(o.role);
     return `<p style="opacity:${live?1:0.4};${live?'':'text-decoration:line-through;'}">
-      <b style="color:var(--gold)">${o.code}</b> — ${o.label} <span class="mono" style="color:var(--text-dim)">(${ROLE_FULL[o.role]}, zone ${o.zone})</span>
+      <b style="color:var(--gold)">${o.code}</b> — ${o.label} <span class="mono" style="color:var(--text-dim)">(${ROLE_FULL[o.role]}${nm?' — '+nm:''}, zone ${o.zone})</span>
     </p>`;
   }).join('');
 
@@ -416,7 +489,7 @@ function renderQuiz(){
     const used = usedRoles.includes(role);
     const chip = document.createElement('button');
     chip.className = 'chip' + (used ? ' used' : '') + (state.quiz.armedChip===role ? ' armed' : '');
-    chip.textContent = role;
+    chip.textContent = role + (getName(role) ? ' ('+getName(role)+')' : '');
     chip.disabled = used || state.quiz.checked;
     chip.onclick = ()=>{ state.quiz.armedChip = (state.quiz.armedChip===role ? null : role); renderQuiz(); };
     tray.appendChild(chip);
@@ -449,6 +522,12 @@ function onZoneClick(zone){
   renderQuiz();
 }
 
+function refreshCourtOnly(){
+  if(state.mode==='learn') renderLearn();
+  else if(state.mode==='strategy') renderStrategy();
+  else renderQuiz();
+}
+
 function render(){
   buildFormationTabs();
   document.getElementById('btnLearn').classList.toggle('active', state.mode==='learn');
@@ -459,6 +538,11 @@ function render(){
   else renderQuiz();
 }
 
+document.getElementById('lineupToggleBtn').onclick = ()=>{
+  state.lineupOpen = !state.lineupOpen;
+  document.getElementById('lineupPanel').style.display = state.lineupOpen ? 'block' : 'none';
+  if(state.lineupOpen) renderLineupPanel();
+};
 document.getElementById('btnLearn').onclick = ()=>{ state.mode='learn'; state.rotation=1; render(); };
 document.getElementById('btnStrategy').onclick = ()=>{ state.mode='strategy'; state.rotation=1; render(); };
 document.getElementById('btnQuiz').onclick = ()=>{ state.mode='quiz'; resetQuiz(); render(); };
